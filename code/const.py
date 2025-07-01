@@ -1,11 +1,12 @@
 # C
-COLOR_YELLOW = (255, 228, 0)
+COLOR_DARK_YELLOW = (255,165,0)
 COLOR_WHITE = (255,255,255)
-
+COLOR_YELLOW = (255, 228, 0)
+COLOR_RED = (250,0,0)
 # M
 MENU_OPTION =('NEW GAME ',
               'SCORE ',
-             'EXIT ')
+              'EXIT ')
 # W
 WIN_WIDTH = 1080
 WIN_HEIGHT = 540

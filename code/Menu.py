@@ -3,7 +3,7 @@ from PIL import Image
 from pygame import Surface, Rect
 from pygame.font import Font
 
-from code.const import WIN_HEIGHT, WIN_WIDTH, COLOR_YELLOW, MENU_OPTION, COLOR_WHITE
+from code.const import WIN_HEIGHT, WIN_WIDTH, COLOR_YELLOW, MENU_OPTION, COLOR_WHITE, COLOR_RED, COLOR_DARK_YELLOW
 
 
 def carregar_gif_para_frames(caminho_gif):
@@ -31,20 +31,36 @@ class Menu:
         self.window = window
         self.start_button_rect = None
         self.quit_button_rect = None
-
+        self.title_font = pygame.font.SysFont(name="dejavusansmono", size=150, bold=True)
+        self.option_font = pygame.font.SysFont(name="dejavusansmono", size=50, bold=True)
         self.frames = carregar_gif_para_frames('./assets/craftpix-net-504452-free-village-pixel-tileset-for-top-down-defense/menu.gif')
         self.rect = self.frames[0].get_rect(left=0, top=0)
-
+        self.menu_option = 0
         self.frame_index = 0
         self.animation_speed = 250
         self.last_update = pygame.time.get_ticks()
 
     def handle_events(self, events):
+        # Check for all events
         for event in events:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            # ... (lógica de botões) ...
+            if event.type == pygame.KEYDOWN:
+                # Todas as referências a 'menu_option' agora usam 'self.menu_option'
+                if event.key == pygame.K_DOWN:
+                    if self.menu_option < len(MENU_OPTION) - 1:
+                        self.menu_option += 1
+                    else:
+                        self.menu_option = 0
+                if event.key == pygame.K_UP:
+                    if self.menu_option > 0:
+                        self.menu_option -= 1
+                    else:
+                        self.menu_option = len(MENU_OPTION) - 1
+                if event.key == pygame.K_RETURN:
+                    return MENU_OPTION[self.menu_option]
+        return None
 
     def update(self):
         now = pygame.time.get_ticks()
@@ -55,19 +71,25 @@ class Menu:
                 self.frame_index = 0
 
     def draw(self, screen: Surface):
-        menu_option = 0
         current_frame = self.frames[self.frame_index]
         screen.blit(source=current_frame, dest=self.rect)
 
-        self.menu_text(150, 'FINAL', COLOR_YELLOW, ((WIN_WIDTH / 2), 70))
-        self.menu_text(150, 'STAND', COLOR_YELLOW, ((WIN_WIDTH / 2), 170))
+        self.menu_text(self.title_font, 'FINAL', COLOR_DARK_YELLOW, ((WIN_WIDTH / 2), 70))
+        self.menu_text(self.title_font, 'STAND', COLOR_DARK_YELLOW, ((WIN_WIDTH / 2), 170))
 
         for i in range(len(MENU_OPTION)):
-            if i ==menu_option:
-                self.menu_text(50, MENU_OPTION [i], COLOR_WHITE, ((WIN_WIDTH / 2), 300 + 60 * i))
+            option_text = MENU_OPTION[i]
+
+            if i == self.menu_option:
+                color = COLOR_YELLOW
+            elif option_text.strip() == 'EXIT':
+                color = COLOR_RED
             else:
-                self.menu_text(50, MENU_OPTION[i], COLOR_WHITE, ((WIN_WIDTH / 2), 300 + 60 * i))
-        pygame.display.flip()
+                color = COLOR_WHITE
+
+            self.menu_text(self.option_font, option_text, color, ((WIN_WIDTH / 2), 300 + 60 * i))
+
+
 
     # 3. Desenhe outros elementos aqui (botões, etc.)
         # Ex: pygame.draw.rect(screen, 'red', self.start_button_rect)
@@ -91,9 +113,7 @@ class Menu:
             pygame.display.flip()
             clock.tick(60)
 
-    def menu_text(self, text_size: int, text: str, text_color: tuple, text_center_pos: tuple):
-        text_font: Font = pygame.font.SysFont(name="dejavusansmono", size=text_size, bold=True)
-        text_surf: Surface = text_font.render(text,  True, text_color).convert_alpha()
+    def menu_text(self, font: Font, text: str, text_color: tuple, text_center_pos: tuple):
+        text_surf: Surface = font.render(text, True, text_color).convert_alpha()
         text_rect: Rect = text_surf.get_rect(center=text_center_pos)
         self.window.blit(source=text_surf, dest=text_rect)
-
