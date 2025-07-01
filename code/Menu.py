@@ -1,10 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from Scene import Scene
 
-
-class Menu(Scene):
+class Menu:
     def __init__(self, window):
         super().__init__()
         self.window = window

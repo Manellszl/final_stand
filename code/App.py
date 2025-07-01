@@ -18,12 +18,10 @@ class App:
         while True:
             menu = Menu(self.window)
             menu.update()
-            pass
-
-      #      for event in pygame.event.get():
-         #       if event.type == pygame.QUIT:
-           #         pygame.quit()
-         #         quit()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
 
     def change_scene(self, new_scene_name):
         pass
