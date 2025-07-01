@@ -3,12 +3,13 @@
 import pygame
 
 from code.Menu import Menu
+from code.const import WIN_WIDTH, WIN_HEIGHT
 
 
 class App:
     def __init__(self):
         pygame.init()
-        self.window = pygame.display.set_mode(size=(600, 480))
+        self.window = pygame.display.set_mode(size=(WIN_WIDTH, WIN_HEIGHT))
         self.clock = None
         self.is_running = None
         self.active_scene = None
@@ -17,11 +18,8 @@ class App:
     def run(self):
         while True:
             menu = Menu(self.window)
-            menu.update()
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
+            menu.run()
+
 
     def change_scene(self, new_scene_name):
         pass
