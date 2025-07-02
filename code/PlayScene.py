@@ -10,7 +10,6 @@ from code.const import WIN_WIDTH, WIN_HEIGHT
 
 class PlayScene:
     def __init__(self, window: Surface):
-        # O seu método __init__ está correto, não precisa de alterações.
         self.window = window
         self.background = pygame.transform.scale(pygame.image.load('./assets/fundofase.jpg').convert(),
                                                  (WIN_WIDTH, WIN_HEIGHT))
@@ -40,7 +39,6 @@ class PlayScene:
         self.last_enemy_spawn_time = 0
 
     def handle_events(self, events):
-        # Este método está correto.
         self.player.handle_events(events)
         for event in events:
             if event.type == pygame.QUIT:
@@ -50,25 +48,15 @@ class PlayScene:
         return None
 
     def start_next_wave(self):
-        # Este método está correto.
         self.wave_in_progress = True
         self.wave_number += 1
         print(f"Iniciando Horda número {self.wave_number}!")
         self.enemy_strength_multiplier *= 1.1
         self.enemies_to_spawn_this_wave = 3 + self.wave_number
 
-    # 2. REMOVA A PRIMEIRA DEFINIÇÃO DE SPAWN_ENEMY E DEIXE APENAS ESTA VERSÃO CORRIGIDA
-        # Dentro da classe PlayScene
-
-        # Dentro da classe PlayScene
-
-        # Substitua seu método spawn_enemy por este:
     def spawn_enemy(self):
-            """Gera um único inimigo em uma posição aleatória e segura."""
 
-            # Loop para garantir que a posição de spawn seja segura
             while True:
-                # Escolhe um lado aleatoriamente (0: cima, 1: direita, 2: baixo, 3: esquerda)
                 side = random.randint(0, 3)
 
                 if side == 0:  # Cima
@@ -80,18 +68,14 @@ class PlayScene:
                 else:  # Esquerda
                     pos = (-50, random.randint(0, WIN_HEIGHT))
 
-                # Converte a posição para um vetor para facilitar o cálculo de distância
                 spawn_pos_vec = pygame.math.Vector2(pos)
                 player_pos_vec = self.player.position
 
-                # Calcula a distância entre o ponto de spawn e o jogador
                 distance = spawn_pos_vec.distance_to(player_pos_vec)
 
-                # Se a distância for segura, sai do loop e usa essa posição
                 if distance > self.player_spawn_safe_radius:
                     break
 
-            # Quando o loop termina, 'pos' contém uma posição segura
             new_enemy = Enemy(position=pos,
                               player=self.player,
                               strength_multiplier=self.enemy_strength_multiplier)
@@ -100,7 +84,6 @@ class PlayScene:
             self.enemies.add(new_enemy)
 
     def update(self):
-        # Este método está correto.
         now = pygame.time.get_ticks()
 
         if not self.wave_in_progress and len(self.enemies) == 0:

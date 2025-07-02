@@ -6,8 +6,6 @@ from code.const import WIN_WIDTH, WIN_HEIGHT
 
 
 class Enemy(Entity):
-    # O método __init__ e os outros métodos (get_random_wander_direction, wander, chase, take_damage)
-    # continuam exatamente iguais. Não precisam de alteração.
     def __init__(self, position: tuple, player, strength_multiplier: float = 1.0):
         super().__init__("wolf", position, './assets/wolf.png')
         self.player = player
@@ -40,15 +38,10 @@ class Enemy(Entity):
         self.velocity = direction * self.chase_speed
 
     def take_damage(self, amount: int):
-        """Reduz a vida e remove o sprite se a vida chegar a zero."""
         self.health -= amount
-
-        # --- MUDANÇA PRINCIPAL AQUI ---
-        # Se a vida acabar, chama o self.kill() imediatamente.
         if self.health <= 0:
-            self.kill()  # kill() remove o sprite de todos os grupos automaticamente.
+            self.kill()
 
-        # Agora, vamos limpar o método update para remover a lógica de morte antiga
 
     def update(self):
         # A lógica de IA para definir o estado e a velocidade continua a mesma
@@ -64,14 +57,11 @@ class Enemy(Entity):
             elif self.state == 'wandering':
                 self.wander()
         else:
-            # Se não tiver vida, para de se mover
             self.velocity = pygame.math.Vector2(0, 0)
 
-        # Aplica o movimento
         self.position += self.velocity
         self.rect.center = self.position
 
-        # A lógica de contenção na tela continua a mesma
         if self.rect.left < 0:
             self.rect.left = 0
         if self.rect.right > WIN_WIDTH:

@@ -15,11 +15,9 @@ def load_animation_frames(path_prefix, frame_count):
     return frames
 
 class Player(Entity):
-    # Dentro da classe Player
 
     def __init__(self, position: tuple, groups: dict):
         super().__init__("player", position, './assets/player_idle_0.png')
-        # ... (código de animações e grupos) ...
         self.animations = {
             'idle': load_animation_frames('./assets/player_idle', 4),
             'walk': load_animation_frames('./assets/player_walk', 2),
@@ -34,7 +32,6 @@ class Player(Entity):
         self.xp = 0
         self.xp_to_next_level = 100
 
-        # ... (resto dos seus atributos: is_shooting, cooldown, etc.) ...
         self.is_shooting = False
         self.shoot_cooldown = 1000
         self.last_shot_time = 0
