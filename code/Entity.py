@@ -5,10 +5,8 @@ from abc import ABC, abstractmethod
 import pygame
 
 
-# MUDANÇA 1: Adicione pygame.sprite.Sprite na herança
 class Entity(pygame.sprite.Sprite, ABC):
     def __init__(self, name: str, position: tuple, path: str):
-        # MUDANÇA 2: Adicione esta linha. É obrigatória para Sprites.
         super().__init__()
 
         self.name = name
@@ -16,7 +14,6 @@ class Entity(pygame.sprite.Sprite, ABC):
 
         self.image = pygame.image.load(path).convert_alpha()
 
-        # 'rect' é o nome padrão do Pygame para o retângulo do sprite
         self.rect = self.image.get_rect(center=self.position)
 
         self.speed = 0

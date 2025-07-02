@@ -2,23 +2,26 @@ import pygame
 from pygame import Surface
 from code.Player import Player
 from code.Enemy import Enemy
+from code.HUD import HUD # 1. Importe a classe HUD
 from code.const import WIN_WIDTH, WIN_HEIGHT
+
 
 class PlayScene:
     def __init__(self, window: Surface):
         self.window = window
+        # ... (código do background e grupos de sprites) ...
         self.background = pygame.transform.scale(pygame.image.load('./assets/fundofase.jpg').convert(), (WIN_WIDTH, WIN_HEIGHT))
         self.background_rect = self.background.get_rect(left=0, top=0)
         self.all_sprites = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.arrows = pygame.sprite.Group()
 
-        groups = {
-            'all': self.all_sprites,
-            'arrows': self.arrows
-        }
+        groups = {'all': self.all_sprites, 'arrows': self.arrows}
         self.player = Player(position=(WIN_WIDTH / 2, 500), groups=groups)
         self.all_sprites.add(self.player)
+
+        # 2. Crie a instância do HUD, passando o jogador
+        self.hud = HUD(self.player)
 
         self.spawn_enemy()
     # ... (resto da classe) ...
@@ -55,3 +58,4 @@ class PlayScene:
     def draw(self, screen: Surface):
         screen.blit(self.background, self.background_rect)
         self.all_sprites.draw(screen)
+        self.hud.draw(screen)
