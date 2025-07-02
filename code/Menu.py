@@ -32,12 +32,15 @@ class Menu:
         self.title_font = pygame.font.SysFont(name="dejavusansmono", size=150, bold=True)
         self.option_font = pygame.font.SysFont(name="dejavusansmono", size=50, bold=True)
         self.frames = carregar_gif_para_frames(
-            './assets/craftpix-net-504452-free-village-pixel-tileset-for-top-down-defense/menu.gif')
+            './assets/menu.gif')
         self.rect = self.frames[0].get_rect(left=0, top=0)
         self.menu_option = 0  # A única variável para controlar a opção selecionada
         self.frame_index = 0
         self.animation_speed = 250
         self.last_update = pygame.time.get_ticks()
+
+        pygame.mixer_music.load('./assets/Menu.mp3')
+        pygame.mixer_music.play(-1)
 
     def handle_events(self, events):
         """Processa os eventos e retorna um 'comando' se necessário."""
