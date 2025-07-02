@@ -20,7 +20,9 @@ class PlayScene:
 
         self.enemy_spawn_cooldown = 500
         self.last_enemy_spawn_time = 0
-        self.player_spawn_safe_radius = 250
+        self.player_spawn_safe_radius = 100
+
+        self.enemies_killed = 0
 
         groups = {'all': self.all_sprites, 'arrows': self.arrows}
         self.player = Player(position=(WIN_WIDTH / 2, 500), groups=groups)
@@ -60,13 +62,13 @@ class PlayScene:
                 side = random.randint(0, 3)
 
                 if side == 0:  # Cima
-                    pos = (random.randint(0, WIN_WIDTH), -50)
+                    pos = (random.randint(0, 900), -50)
                 elif side == 1:  # Direita
-                    pos = (WIN_WIDTH + 50, random.randint(0, WIN_HEIGHT))
+                    pos = (800 + 50, random.randint(0, 500))
                 elif side == 2:  # Baixo
-                    pos = (random.randint(0, WIN_WIDTH), WIN_HEIGHT + 50)
+                    pos = (random.randint(0, 950), 450 + 50)
                 else:  # Esquerda
-                    pos = (-50, random.randint(0, WIN_HEIGHT))
+                    pos = (-50, random.randint(0, 400))
 
                 spawn_pos_vec = pygame.math.Vector2(pos)
                 player_pos_vec = self.player.position
@@ -103,6 +105,36 @@ class PlayScene:
 
         self.all_sprites.update()
 
+        enemies_list = self.enemies.sprites()
+        for i, enemy1 in enumerate(enemies_list):
+            for j in range(i + 1, len(enemies_list)):
+                enemy2 = enemies_list[j]
+
+                # Calcula a distância entre os dois inimigos
+                distance_vec = enemy1.position - enemy2.position
+                distance = distance_vec.length()
+
+                # Se a distância for menor que a soma dos raios, eles estão colidindo
+                total_radius = enemy1.radius + enemy2.radius
+                if distance < total_radius:
+                    # Calcula o quanto eles estão sobrepostos
+                    overlap = total_radius - distance
+
+                    # Calcula a direção para empurrá-los (normaliza o vetor de distância)
+                    # Adiciona um pequeno valor se o vetor for nulo para evitar divisão por zero
+                    if distance_vec.length() == 0:
+                        distance_vec = pygame.math.Vector2(1, 0)
+
+                    push_vec = distance_vec.normalize()
+
+                    # Move cada inimigo para fora na direção oposta, pela metade da sobreposição
+                    enemy1.position += push_vec * (overlap / 2)
+                    enemy2.position -= push_vec * (overlap / 2)
+
+                    # Atualiza os retângulos após a correção da posição
+                    enemy1.rect.center = enemy1.position
+                    enemy2.rect.center = enemy2.position
+
         hits = pygame.sprite.groupcollide(self.arrows, self.enemies, True, False)
         for arrow, enemy_list in hits.items():
             for enemy in enemy_list:
@@ -110,11 +142,10 @@ class PlayScene:
                 if not enemy.alive():
                     self.player.xp += enemy.xp_drop
                     print(f"Inimigo derrotado! +{enemy.xp_drop} XP.")
+                    self.enemies_killed += 1
 
-        player_hits = pygame.sprite.spritecollide(self.player, self.enemies, False)
-        if player_hits:
-            print("Colisão! O jogador perdeu.")
-            return 'MENU'
+        if not self.player.alive():
+            return 'GAME_OVER'
 
     def draw(self, screen: Surface):
         # Este método está correto.

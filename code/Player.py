@@ -16,6 +16,10 @@ def load_animation_frames(path_prefix, frame_count):
 
 class Player(Entity):
 
+    # Dentro da classe Player
+
+    # Dentro da classe Player
+
     def __init__(self, position: tuple, groups: dict):
         super().__init__("player", position, './assets/player_idle_0.png')
         self.animations = {
@@ -24,21 +28,25 @@ class Player(Entity):
             'shoot': load_animation_frames('./assets/player_shoot', 6)
         }
         self.groups = groups
-
-        # --- ATRIBUTOS PARA O HUD ---
         self.max_health = 100
         self.health = self.max_health
         self.level = 1
         self.xp = 0
         self.xp_to_next_level = 100
+        self.is_alive = True
 
-        self.is_shooting = False
+        # --- Bloco de atributos de tiro corrigido (sem duplicação) ---
+        self.is_charging = False
+        self.charge_complete = False
         self.shoot_cooldown = 1000
-        self.last_shot_time = 0
-        self.arrow_damage = 100
+        self.last_shot_time = -self.shoot_cooldown
+        self.arrow_damage = 50
         self.shoot_target_pos = None
-        self.current_state = 'idle'
+
         self.current_direction = 'right'
+        self.current_state = 'idle'
+        self.previous_state = self.current_state
+
         self.frame_index = 0
         self.animation_speed = 150
         self.last_update = pygame.time.get_ticks()
@@ -65,56 +73,103 @@ class Player(Entity):
             self.position.y += self.speed
             self.is_moving = True
 
+        # Dentro da classe Player
+
     def handle_events(self, events):
-        now = pygame.time.get_ticks()
+            now = pygame.time.get_ticks()
 
-        self.get_input()
+            # Input de movimento (teclado) sempre é verificado
+            self.get_input()
 
-        for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if not self.is_shooting and (now - self.last_shot_time > self.shoot_cooldown):
-                    self.is_shooting = True
-                    self.frame_index = 0
-                    self.last_shot_time = now
-                    self.shoot_target_pos = event.pos
+            # Input de tiro (mouse)
+            for event in events:
+                # Pressionou o botão esquerdo para começar a carregar
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    # Só pode começar a carregar se o cooldown já passou
+                    if now - self.last_shot_time > self.shoot_cooldown:
+                        self.is_charging = True
+                        self.charge_complete = False  # Reseta a flag de carga
+                        self.frame_index = 0  # Reinicia a animação de tiro
+
+                # Soltou o botão esquerdo
+                if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    # Se estava carregando o tiro
+                    if self.is_charging:
+                        # E se a carga estava completa (animação no último frame)
+                        if self.charge_complete:
+                            # Atira!
+                            self.shoot_target_pos = event.pos
+                            self.shoot()
+                            self.last_shot_time = now  # Inicia o cooldown
+                        else:
+                            # Se soltou antes, o tiro é cancelado
+                            print("Tiro cancelado!")
+
+                        # Para de carregar, independentemente de ter atirado ou não
+                        self.is_charging = False
+                        self.charge_complete = False
+
+        # Dentro da classe Player
+
+    # Dentro da classe Player
+
+    def take_damage(self, amount: int):
+        """Reduz a vida do jogador e atualiza seu estado se morrer."""
+        if self.health > 0:  # Só pode tomar dano se estiver vivo
+            self.health -= amount
+            print(f"Jogador atingido! Vida atual: {self.health}")
+            if self.health <= 0:
+                self.health = 0
+                self.is_alive = False  # Sinaliza que o jogador morreu
+                print("O jogador foi derrotado!")
+                self.kill()  # Remove o sprite do jogador dos grupos
 
     def animate(self):
         now = pygame.time.get_ticks()
 
-        if self.is_shooting:
+        # Define o estado da animação
+        if self.is_charging:
             self.current_state = 'shoot'
-            if self.shoot_target_pos:
-                if self.shoot_target_pos[0] < self.rect.centerx:
-                    self.current_direction = 'left'
-                else:
-                    self.current_direction = 'right'
+            # Vira o personagem na direção do mouse
+            mouse_x, _ = pygame.mouse.get_pos()
+            if mouse_x < self.rect.centerx:
+                self.current_direction = 'left'
+            else:
+                self.current_direction = 'right'
         elif self.is_moving:
             self.current_state = 'walk'
         else:
             self.current_state = 'idle'
 
+        # --- MUDANÇA PRINCIPAL AQUI ---
+        # Se o estado mudou desde o último frame, reseta a animação
+        if self.current_state != self.previous_state:
+            self.frame_index = 0
+        # Atualiza o estado anterior para o próximo ciclo
+        self.previous_state = self.current_state
+
         animation_frames = self.animations[self.current_state]
 
+        # Atualiza a imagem para o frame atual
+        # O [self.frame_index] agora é seguro, pois foi resetado se necessário
+        current_image = animation_frames[self.frame_index]
+        if self.current_direction == 'left':
+            self.image = pygame.transform.flip(current_image, True, False)
+        else:
+            self.image = current_image
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+        # Lógica para avançar o frame (continua a mesma)
         if now - self.last_update > self.animation_speed:
             self.last_update = now
-
-            self.frame_index += 1
-
-            if self.frame_index >= len(animation_frames):
-                if self.current_state == 'shoot':
-                    self.is_shooting = False
-                    self.frame_index = 0
-                    self.shoot()
-                else:
-                    self.frame_index = 0
-
-            new_image = animation_frames[self.frame_index]
-            if self.current_direction == 'left':
-                self.image = pygame.transform.flip(new_image, True, False)
+            if self.is_charging:
+                if not self.charge_complete:
+                    self.frame_index += 1
+                    if self.frame_index >= len(animation_frames) - 1:
+                        self.frame_index = len(animation_frames) - 1
+                        self.charge_complete = True
             else:
-                self.image = new_image
-            old_center = self.rect.center
-            self.rect = self.image.get_rect(center=old_center)
+                self.frame_index = (self.frame_index + 1) % len(animation_frames)
 
     def shoot(self):
         if self.shoot_target_pos:
@@ -123,6 +178,10 @@ class Player(Entity):
             self.groups['arrows'].add(new_arrow)
             self.shoot_target_pos = None  # Limpa o alvo
 
+        # Dentro da classe Player
+
     def update(self):
-        self.animate()
-        self.rect.center = self.position
+            # A lógica de input foi movida para 'handle_events'
+            # O update agora só precisa garantir que a animação rode e a posição seja atualizada
+            self.animate()
+            self.rect.center = self.position

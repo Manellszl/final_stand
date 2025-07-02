@@ -1,6 +1,7 @@
 import pygame
 from code.Menu import Menu
-from code.PlayScene import PlayScene  # Importe a nova cena
+from code.PlayScene import PlayScene
+from code.GameOverScene import GameOverScene  # Importe a nova cena
 from code.const import WIN_WIDTH, WIN_HEIGHT
 
 
@@ -10,12 +11,12 @@ class Game:
         self.window = pygame.display.set_mode(size=(WIN_WIDTH, WIN_HEIGHT))
         self.is_running = True
 
-        # Cria todas as cenas que o jogo terá
+        # Armazena as instâncias das cenas
         self.scenes = {
             'MENU': Menu(self.window),
-            'PLAYING': PlayScene(self.window)
+            'PLAYING': PlayScene(self.window),
+            'GAME_OVER': GameOverScene(self.window)
         }
-        # Define a cena inicial
         self.active_scene_name = 'MENU'
 
     def run(self):
@@ -24,24 +25,37 @@ class Game:
         while self.is_running:
             active_scene = self.scenes[self.active_scene_name]
 
-            # 1. Lidando com Eventos
             events = pygame.event.get()
-            command = active_scene.handle_events(events)
+            command_from_events = active_scene.handle_events(events)
+            command_from_update = active_scene.update()
+
+            # Processa o comando de qualquer uma das fontes
+            command = command_from_events or command_from_update
 
             if command == 'QUIT':
                 self.is_running = False
-            elif command is not None:  # Se a cena retornou um comando para trocar
+            elif command == 'GAME_OVER':
+                # Pega as estatísticas da PlayScene antes de mudar
+                stats = {
+                    "level": active_scene.player.level,
+                    "waves": active_scene.wave_number,
+                    "kills": active_scene.enemies_killed
+                }
+                # Passa as estatísticas para a cena de Game Over
+                self.scenes['GAME_OVER'].set_stats(**stats)
+                self.active_scene_name = 'GAME_OVER'
+            elif command is not None:  # Se for 'MENU' ou 'PLAYING'
+                # IMPORTANTE: Se o comando for para jogar, reseta a PlayScene
+                if command == 'PLAYING':
+                    self.scenes['PLAYING'] = PlayScene(self.window)
+
+                # Reseta a cena do menu também, se estiver vindo do Game Over
+                if self.active_scene_name == 'GAME_OVER' and command == 'MENU':
+                    self.scenes['MENU'] = Menu(self.window)
+
                 self.active_scene_name = command
 
-            # 2. Atualizando a Lógica
-            # Algumas cenas podem retornar comandos também no update (ex: colisão)
-            command_from_update = active_scene.update()
-            if command_from_update is not None:
-                self.active_scene_name = command_from_update
-
-            # 3. Desenhando na Tela
             active_scene.draw(self.window)
-
             pygame.display.flip()
             clock.tick(60)
 
