@@ -1,13 +1,12 @@
 import pygame
 from code.Entity import Entity
+from code.Arrow import Arrow
 from code.const import WIN_WIDTH, WIN_HEIGHT
 
 
 def load_animation_frames(path_prefix, frame_count):
-    """Função auxiliar para carregar uma sequência de frames."""
     frames = []
     for i in range(frame_count):
-        # Assumindo que os arquivos são nomeados como 'caminho_0.png', 'caminho_1.png', etc.
         path = f"{path_prefix}_{i}.png"
         try:
             frames.append(pygame.image.load(path).convert_alpha())
@@ -15,98 +14,109 @@ def load_animation_frames(path_prefix, frame_count):
             print(f"Erro ao carregar a imagem: {path}\n{e}")
     return frames
 
-
 class Player(Entity):
-    def __init__(self, position: tuple):
-        # O init da classe Entity agora espera o caminho, então passamos um placeholder
-        # já que vamos sobrescrever self.image imediatamente.
-        super().__init__("player", position, './assets/player_idle_0.png')  # Use a primeira imagem como placeholder
-
-        # --- LÓGICA DE ANIMAÇÃO ---
+    def __init__(self, position: tuple, groups: dict):
+        super().__init__("player", position, './assets/player_idle_0.png')
         self.animations = {
-            'idle': load_animation_frames('./assets/player_idle', 4),  # Ex: 2 frames para a animação de parado
-            'walk': load_animation_frames('./assets/player_walk', 2)  # Ex: 4 frames para a de andar
+            'idle': load_animation_frames('./assets/player_idle', 4),
+            'walk': load_animation_frames('./assets/player_walk', 2),
+            'shoot': load_animation_frames('./assets/player_shoot', 6)
         }
+
+        self.groups = groups
+
+        self.is_shooting = False
+        self.shoot_cooldown = 1000
+        self.last_shot_time = 0
+        self.arrow_damage = 50
+        self.shoot_target_pos = None
+
         self.current_state = 'idle'
         self.current_direction = 'right'
-
         self.frame_index = 0
-        self.animation_speed = 150  # ms por frame
+        self.animation_speed = 150
         self.last_update = pygame.time.get_ticks()
-
-        # Define a imagem inicial
         self.image = self.animations[self.current_state][self.frame_index]
         self.rect = self.image.get_rect(center=position)
-
         self.speed = 5
         self.is_moving = False
 
-        # Dentro da classe Player
-
-        # Dentro da sua classe Player, adicione este método:
-
     def get_input(self):
-            """Processa o input do teclado para WASD e Setas."""
-            self.is_moving = False
-            keys = pygame.key.get_pressed()
+        self.is_moving = False
+        keys = pygame.key.get_pressed()
+        if (keys[pygame.K_a] or keys[pygame.K_LEFT]) and self.rect.left > 0:
+            self.position.x -= self.speed
+            self.current_direction = 'left'
+            self.is_moving = True
+        if (keys[pygame.K_d] or keys[pygame.K_RIGHT]) and self.rect.right < WIN_WIDTH:
+            self.position.x += self.speed
+            self.current_direction = 'right'
+            self.is_moving = True
+        if (keys[pygame.K_w] or keys[pygame.K_UP]) and self.rect.top > 0:
+            self.position.y -= self.speed
+            self.is_moving = True
+        if (keys[pygame.K_s] or keys[pygame.K_DOWN]) and self.rect.bottom < WIN_HEIGHT:
+            self.position.y += self.speed
+            self.is_moving = True
 
-            # Esquerda com 'A' OU Seta Esquerda
-            if (keys[pygame.K_a] or keys[pygame.K_LEFT]) and self.rect.left > 0:
-                self.position.x -= self.speed
-                self.current_direction = 'left'
-                self.is_moving = True
-
-            # Direita com 'D' OU Seta Direita
-            if (keys[pygame.K_d] or keys[pygame.K_RIGHT]) and self.rect.right < WIN_WIDTH:
-                self.position.x += self.speed
-                self.current_direction = 'right'
-                self.is_moving = True
-
-            # Cima com 'W' OU Seta Cima
-            if (keys[pygame.K_w] or keys[pygame.K_UP]) and self.rect.top > 0:
-                self.position.y -= self.speed
-                self.is_moving = True
-
-            # Baixo com 'S' OU Seta Baixo
-            if (keys[pygame.K_s] or keys[pygame.K_DOWN]) and self.rect.bottom < WIN_HEIGHT:
-                self.position.y += self.speed
-                self.is_moving = True
-
-            # Define o estado com base no movimento
-            if self.is_moving:
-                self.current_state = 'walk'
-            else:
-                self.current_state = 'idle'
-
-    def animate(self):
-        """Atualiza o frame da animação atual."""
+    def handle_events(self, events):
         now = pygame.time.get_ticks()
 
-        # Pega a lista de frames para o estado atual (idle ou walk)
+        self.get_input()
+
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if not self.is_shooting and (now - self.last_shot_time > self.shoot_cooldown):
+                    self.is_shooting = True
+                    self.frame_index = 0
+                    self.last_shot_time = now
+                    self.shoot_target_pos = event.pos
+
+    def animate(self):
+        now = pygame.time.get_ticks()
+
+        if self.is_shooting:
+            self.current_state = 'shoot'
+            if self.shoot_target_pos:
+                if self.shoot_target_pos[0] < self.rect.centerx:
+                    self.current_direction = 'left'
+                else:
+                    self.current_direction = 'right'
+        elif self.is_moving:
+            self.current_state = 'walk'
+        else:
+            self.current_state = 'idle'
+
         animation_frames = self.animations[self.current_state]
 
         if now - self.last_update > self.animation_speed:
             self.last_update = now
-            # Avança para o próximo frame, voltando ao início se chegar ao fim
-            self.frame_index = (self.frame_index + 1) % len(animation_frames)
 
-            # Atualiza a imagem para o novo frame
+            self.frame_index += 1
+
+            if self.frame_index >= len(animation_frames):
+                if self.current_state == 'shoot':
+                    self.is_shooting = False
+                    self.frame_index = 0
+                    self.shoot()
+                else:
+                    self.frame_index = 0
+
             new_image = animation_frames[self.frame_index]
-
-            # Inverte a imagem se a direção for para a esquerda
             if self.current_direction == 'left':
                 self.image = pygame.transform.flip(new_image, True, False)
-            else:  # Direita
+            else:
                 self.image = new_image
-
-            # IMPORTANTE: Atualiza o rect para o centro da posição antiga para não "pular"
             old_center = self.rect.center
             self.rect = self.image.get_rect(center=old_center)
 
-    def update(self):
-        """O método principal de atualização, chamado a cada quadro."""
-        self.get_input()
-        self.animate()
+    def shoot(self):
+        if self.shoot_target_pos:
+            new_arrow = Arrow(self.rect.center, self.shoot_target_pos, self.arrow_damage)
+            self.groups['all'].add(new_arrow)
+            self.groups['arrows'].add(new_arrow)
+            self.shoot_target_pos = None  # Limpa o alvo
 
-        # Atualiza a posição final do rect com base no vetor de posição
+    def update(self):
+        self.animate()
         self.rect.center = self.position
