@@ -38,7 +38,7 @@ class Player(Entity):
         self.is_shooting = False
         self.shoot_cooldown = 1000
         self.last_shot_time = 0
-        self.arrow_damage = 50
+        self.arrow_damage = 100
         self.shoot_target_pos = None
         self.current_state = 'idle'
         self.current_direction = 'right'
