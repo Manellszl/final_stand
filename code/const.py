@@ -4,7 +4,7 @@ COLOR_WHITE = (255,255,255)
 COLOR_YELLOW = (255, 228, 0)
 COLOR_RED = (250,0,0)
 # M
-MENU_OPTION =('NEW GAME ',
+MENU_OPTION =('START ',
               'SCORE ',
               'EXIT ')
 # W

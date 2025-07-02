@@ -1,4 +1,5 @@
-from code.App import App
+from code.Game import Game
 
-app = App()
-app.run()
+game = Game()
+game.run()
+
