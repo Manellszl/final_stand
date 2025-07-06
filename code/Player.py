@@ -30,15 +30,17 @@ class Player(Entity):
         self.groups = groups
         self.max_health = 100
         self.health = self.max_health
-        self.level = 1
+        self.level = 0
         self.xp = 0
         self.xp_to_next_level = 100
         self.is_alive = True
 
+        self.upgrade_points = 0
+
         # --- Bloco de atributos de tiro corrigido (sem duplicação) ---
         self.is_charging = False
         self.charge_complete = False
-        self.shoot_cooldown = 1000
+        self.shoot_cooldown = 10
         self.last_shot_time = -self.shoot_cooldown
         self.arrow_damage = 50
         self.shoot_target_pos = None
@@ -52,7 +54,7 @@ class Player(Entity):
         self.last_update = pygame.time.get_ticks()
         self.image = self.animations[self.current_state][self.frame_index]
         self.rect = self.image.get_rect(center=position)
-        self.speed = 5
+        self.speed = 1.6
         self.is_moving = False
 
     def get_input(self):
@@ -108,10 +110,39 @@ class Player(Entity):
                         # Para de carregar, independentemente de ter atirado ou não
                         self.is_charging = False
                         self.charge_complete = False
+                if event.type == pygame.KEYDOWN:
+                    if self.upgrade_points > 0:  # Só funciona se tiver pontos
+                        if event.key == pygame.K_1:  # Tecla 1 para Vida
+                            self.upgrade_health()
+                            self.upgrade_points -= 1
+                        elif event.key == pygame.K_2:  # Tecla 2 para Dano
+                            self.upgrade_damage()
+                            self.upgrade_points -= 1
 
-        # Dentro da classe Player
+    def level_up(self):
+        """Processa o level up do jogador."""
+        # Usa 'while' para o caso de o jogador ganhar XP para vários níveis de uma vez
+        while self.xp >= self.xp_to_next_level:
+            # Subtrai o XP necessário, mas mantém o excesso
+            self.xp -= self.xp_to_next_level
+            self.level += 1
+            # Aumenta a quantidade de XP para o próximo nível (ex: 50% mais difícil)
+            self.xp_to_next_level = int(self.xp_to_next_level * 1.5)
+            self.upgrade_points += 1
+            # Cura o jogador completamente como bônus de level up
+            self.health = self.max_health
+            print(f"LEVEL UP! Você chegou ao nível {self.level}!")
 
-    # Dentro da classe Player
+    # --- NOVOS MÉTODOS: UPGRADES ---
+    def upgrade_health(self):
+        self.max_health += 20
+        self.health = self.max_health  # Cura total
+        print(f"Vida máxima aumentada para {self.max_health}")
+
+    def upgrade_damage(self):
+        self.arrow_damage += 10
+        print(f"Dano da flecha aumentado para {self.arrow_damage}")
+
 
     def take_damage(self, amount: int):
         """Reduz a vida do jogador e atualiza seu estado se morrer."""

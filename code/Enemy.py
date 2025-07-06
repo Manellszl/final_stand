@@ -4,7 +4,6 @@ from code.Entity import Entity
 from code.const import WIN_WIDTH, WIN_HEIGHT
 
 
-# Adicione esta função auxiliar no topo do seu arquivo Enemy.py
 def load_animation_frames(path_prefix, frame_count):
     frames = []
     for i in range(frame_count):
@@ -16,47 +15,80 @@ def load_animation_frames(path_prefix, frame_count):
     return frames
 
 
+def tint_surface(surface, color):
+    tinted_surface = surface.copy()
+    tinted_surface.fill(color, special_flags=pygame.BLEND_RGB_MULT)
+    return tinted_surface
+
+
 class Enemy(Entity):
-    def __init__(self, position: tuple, player, strength_multiplier: float = 1.0):
-        # O super().__init__ agora usa o primeiro frame da animação como placeholder
+    def __init__(self, position: tuple, player, enemies_group, enemy_type: str, strength_multiplier: float = 1.0):
         super().__init__("wolf", position, './assets/wolf_walk_0.png')
 
-        # --- NOVOS ATRIBUTOS DE ANIMAÇÃO ---
+        # ANIMAÇÕES
         self.animations = {
             'walk': load_animation_frames('./assets/wolf_walk', 6),
-            'attack': load_animation_frames('./assets/wolf_attack', 4)
+            'attack': load_animation_frames('./assets/wolf_attack', 4),
+            'death': load_animation_frames('./assets/wolf_death', 5)
         }
+        if enemy_type == 'fast':
+            tint_color = (100, 150, 255)
+            for anim_list in self.animations.values():
+                for i in range(len(anim_list)): anim_list[i] = tint_surface(anim_list[i], tint_color)
+        elif enemy_type == 'tank':
+            tint_color = (150, 100, 50)
+            for anim_list in self.animations.values():
+                for i in range(len(anim_list)): anim_list[i] = tint_surface(anim_list[i], tint_color)
 
-        self.attack_range = 40  # Raio de ataque em pixels (bem curto)
-        self.attack_damage = int(10 * strength_multiplier)
-        self.attack_cooldown = 2000  # 2 segundos para poder atacar de novo
-        self.last_attack_time = 0
-
-        self.radius = self.rect.width / 2
+        # CONTROLE DE ANIMAÇÃO
         self.frame_index = 0
-        self.animation_speed = 150  # ms por frame
+        self.animation_speed = 120
         self.last_animation_update = pygame.time.get_ticks()
 
-        # Define a imagem inicial e o rect
-        self.image = self.animations['walk'][self.frame_index]
-        self.rect = self.image.get_rect(center=position)
-
-        # O resto dos seus atributos continua o mesmo
+        # REFERÊNCIAS E ESTADO
         self.player = player
+        self.enemies_group = enemies_group
         self.state = 'wandering'
-        # ... (detection_radius, speeds, health, etc.)
+
+        # ATRIBUTOS BASEADOS NO TIPO
+        base_health, base_speed, base_xp = 100, 2, 500
+        if enemy_type == 'fast':
+            base_health *= 0.7
+            base_speed *= 1.6
+            base_xp *= 1.2
+        elif enemy_type == 'tank':
+            base_health *= 2.0
+            base_speed *= 0.7
+            base_xp *= 1.5
+
+        self.health = int(base_health * strength_multiplier)
+        self.chase_speed = random.uniform(base_speed, base_speed + 0.5)
+        self.xp_drop = int(base_xp * strength_multiplier)
+        self.attack_damage = int(10 * strength_multiplier)
+
+        # ATRIBUTOS DE IA E COMBATE
+        self.velocity = pygame.math.Vector2(0, 0)
         self.detection_radius = 800
-        self.chase_speed = random.uniform(1.5, 2.5)
+        self.attack_range = 60
+        self.attack_cooldown = 1500
+        self.last_attack_time = 0
         self.wander_speed = 0.5
         self.wander_direction = self.get_random_wander_direction()
         self.last_wander_change = pygame.time.get_ticks()
         self.wander_interval = random.randint(2000, 4000)
-        base_health = 100
-        self.health = int(base_health * strength_multiplier)
-        self.xp_drop = int(10 * strength_multiplier)
-        self.velocity = pygame.math.Vector2(0, 0)
+        self.last_hit_time = -1000
+        self.hit_flash_duration = 100
+        self.separation_radius = 70
+        self.separation_strength = 2.0  # Aumentei um pouco para o efeito ser mais visível
 
-    def get_random_wander_direction(self):
+        # IMAGEM E RECT INICIAIS
+        self.image = self.animations['walk'][self.frame_index]
+        self.rect = self.image.get_rect(center=position)
+        self.radius = self.rect.width / 2
+
+    # --- MÉTODOS DE COMPORTAMENTO ---
+    @staticmethod
+    def get_random_wander_direction():
         angle = random.uniform(0, 360)
         return pygame.math.Vector2(1, 0).rotate(angle)
 
@@ -66,93 +98,104 @@ class Enemy(Entity):
             self.last_wander_change = now
             self.wander_interval = random.randint(2000, 4000)
             self.wander_direction = self.get_random_wander_direction()
-        self.velocity = self.wander_direction * self.wander_speed
+        return self.wander_direction * self.wander_speed
 
     def chase(self):
-        direction = (self.player.position - self.position).normalize()
-        self.velocity = direction * self.chase_speed
+        if self.player.position.distance_to(self.position) > 0:
+            direction = (self.player.position - self.position).normalize()
+            return direction * self.chase_speed
+        return pygame.math.Vector2()
+
+    def separation(self):
+        steering = pygame.math.Vector2()
+        for enemy in self.enemies_group:
+            if enemy != self:
+                distance = self.position.distance_to(enemy.position)
+                if 0 < distance < self.separation_radius:
+                    diff = self.position - enemy.position
+                    steering += diff / distance
+        return steering
 
     def take_damage(self, amount: int):
-        self.health -= amount
-        if self.health <= 0:
-            self.kill()
+        if self.state != 'death':
+            self.last_hit_time = pygame.time.get_ticks()
+            self.health -= amount
+            if self.health <= 0:
+                self.health = 0
+                self.state = 'death'
+                self.frame_index = 0
+                return True
+        return False
 
-        # Dentro da classe Enemy
+    # --- MÉTODOS PRINCIPAIS DE ATUALIZAÇÃO ---
+    def set_state(self):
+        """Define o estado do inimigo (mas não o movimento)."""
+        if self.state == 'death': return  # Se está morrendo, não faz mais nada
 
-        # Dentro da classe Enemy
+        distance_to_player = self.position.distance_to(self.player.position)
+        now = pygame.time.get_ticks()
 
-    def update(self):
-            """O cérebro da IA: decide o que fazer a cada quadro."""
-            now = pygame.time.get_ticks()
+        if distance_to_player < self.attack_range and (now - self.last_attack_time > self.attack_cooldown):
+            self.state = 'attack'
+            self.frame_index = 0
+            self.last_attack_time = now
+        elif distance_to_player < self.detection_radius and self.state != 'attack':
+            self.state = 'walk'
+        elif self.state != 'attack':
+            self.state = 'walk'
 
-            if self.health > 0:
-                distance_to_player = self.position.distance_to(self.player.position)
-
-                # --- LÓGICA DE TRANSIÇÃO DE ESTADO (com prioridade de ataque) ---
-                # 1. Pode atacar? (Está no alcance E o cooldown acabou)
-                if distance_to_player < self.attack_range and (now - self.last_attack_time > self.attack_cooldown):
-                    self.state = 'attacking'
-                    self.frame_index = 0  # Reinicia a animação de ataque
-                    self.last_attack_time = now
-                # 2. Se não pode atacar, deve perseguir?
-                elif distance_to_player < self.detection_radius and self.state != 'attacking':
-                    self.state = 'chasing'
-                # 3. Se não, apenas vagueia
-                elif self.state != 'attacking':
-                    self.state = 'wandering'
-
-                # Define a velocidade com base no estado
-                if self.state == 'chasing':
-                    self.chase()
-                elif self.state == 'wandering':
-                    self.wander()
-                elif self.state == 'attacking':
-                    self.velocity = pygame.math.Vector2(0, 0)  # Fica parado para atacar
-
-            else:  # Se está morto, não se move
-                self.velocity = pygame.math.Vector2(0, 0)
-
-            # Chama a animação e aplica o movimento
-            self.animate()
-            self.position += self.velocity
-            self.rect.center = self.position
-
-            # A lógica de contenção de tela continua a mesma
-            # ...
+    def set_velocity(self):
+        """Define a velocidade com base no estado."""
+        if self.state == 'walk':
+            self.velocity = self.chase() + self.separation() * self.separation_strength
+        elif self.state == 'walk':
+            self.velocity = self.wander() + self.separation() * self.separation_strength
+        else:  # Para 'attack' e 'dying'
+            self.velocity = pygame.math.Vector2()
 
     def animate(self):
-            """Atualiza a imagem e aplica o dano no final da animação de ataque."""
-            now = pygame.time.get_ticks()
+        """Atualiza a imagem e lida com o fim das animações."""
+        now = pygame.time.get_ticks()
 
-            # Define qual animação usar com base no estado
-            if self.state == 'attacking':
-                animation_frames = self.animations['attack']
-            else:  # Para 'wandering' e 'chasing', usa a mesma animação de andar
-                animation_frames = self.animations['walk']
+        animation_frames = self.animations[self.state]
+        if self.frame_index >= len(animation_frames): self.frame_index = 0
 
-            # Atualiza a imagem para o frame atual
-            self.image = animation_frames[self.frame_index]
-            if self.velocity.x > 0:
-                self.image = pygame.transform.flip(self.image, True, False)
+        self.image = animation_frames[self.frame_index]
+        if self.velocity.x < 0:
+            self.image = pygame.transform.flip(self.image, True, False)
 
-            # Lógica para avançar o frame
-            if now - self.last_animation_update > self.animation_speed:
-                self.last_animation_update = now
-                self.frame_index += 1
+        if now - self.last_hit_time < self.hit_flash_duration:
+            red_image = self.image.copy()
+            red_image.fill((255, 100, 100), special_flags=pygame.BLEND_RGB_MULT)
+            self.image = red_image
 
-                # Se a animação terminou
-                if self.frame_index >= len(animation_frames):
-                    # Se era a animação de ATAQUE que acabou
-                    if self.state == 'attacking':
-                        # Verifica NOVAMENTE se o jogador ainda está no alcance para levar dano
-                        if self.position.distance_to(self.player.position) < self.attack_range:
-                            self.player.take_damage(self.attack_damage)
-                        # Reseta o estado (na próxima volta do update, ele decidirá se persegue ou vagueia)
-                        self.state = 'wandering'
-
-                        # Para qualquer animação que termine, reseta o frame_index
+        if now - self.last_animation_update > self.animation_speed:
+            self.last_animation_update = now
+            self.frame_index += 1
+            if self.frame_index >= len(animation_frames):
+                if self.state == 'attack':
+                    if self.position.distance_to(self.player.position) < self.attack_range:
+                        self.player.take_damage(self.attack_damage)
+                    self.state = 'walk'
+                    self.frame_index = 0
+                elif self.state == 'death':
+                    self.kill()
+                else:
                     self.frame_index = 0
 
-            # Atualiza o retângulo
-            old_center = self.rect.center
-            self.rect = self.image.get_rect(center=old_center)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def update(self):
+        """Orquestra todas as ações do inimigo em um quadro."""
+        self.set_state()
+        self.set_velocity()
+        self.animate()
+
+        # Aplica movimento e contenção na tela
+        self.position += self.velocity
+        self.rect.center = self.position
+        if self.rect.left < 0: self.rect.left = 0
+        if self.rect.right > WIN_WIDTH: self.rect.right = WIN_WIDTH
+        if self.rect.top < 0: self.rect.top = 0
+        if self.rect.bottom > WIN_HEIGHT: self.rect.bottom = WIN_HEIGHT
+        self.position.x, self.position.y = self.rect.centerx, self.rect.centery

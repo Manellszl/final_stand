@@ -1,6 +1,7 @@
 import pygame
+import code.ScoreManager as sm
 from pygame import Surface
-from code.const import WIN_WIDTH, WIN_HEIGHT, COLOR_RED, COLOR_WHITE, COLOR_YELLOW
+from code.const import WIN_WIDTH, COLOR_RED, COLOR_WHITE, COLOR_YELLOW
 
 
 class GameOverScene:
@@ -22,6 +23,15 @@ class GameOverScene:
         self.final_level = level
         self.waves_survived = waves - 1  # Mostra a última wave completada
         self.enemies_killed = kills
+
+        current_run_score = {
+            "level": self.final_level,
+            "waves": self.waves_survived,
+            "kills": self.enemies_killed
+        }
+        # Adiciona e salva a pontuação assim que a tela de Game Over é criada
+        sm.add_score(current_run_score)
+        print("Pontuação salva!")
 
     def handle_events(self, events):
         for event in events:

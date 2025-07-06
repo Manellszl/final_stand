@@ -1,7 +1,8 @@
 import pygame
 from code.Menu import Menu
 from code.PlayScene import PlayScene
-from code.GameOverScene import GameOverScene  # Importe a nova cena
+from code.GameOverScene import GameOverScene
+from code.ScoreScene import ScoreScene
 from code.const import WIN_WIDTH, WIN_HEIGHT
 
 
@@ -15,7 +16,8 @@ class Game:
         self.scenes = {
             'MENU': Menu(self.window),
             'PLAYING': PlayScene(self.window),
-            'GAME_OVER': GameOverScene(self.window)
+            'GAME_OVER': GameOverScene(self.window),
+            'SCORE': ScoreScene(self.window)
         }
         self.active_scene_name = 'MENU'
 

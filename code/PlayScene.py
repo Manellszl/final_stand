@@ -5,7 +5,7 @@ import random  # 1. Importe o módulo random no início do arquivo
 from code.Player import Player
 from code.Enemy import Enemy
 from code.HUD import HUD
-from code.const import WIN_WIDTH, WIN_HEIGHT
+from code.const import WIN_WIDTH, WIN_HEIGHT, COLOR_YELLOW
 
 
 class PlayScene:
@@ -23,6 +23,10 @@ class PlayScene:
         self.player_spawn_safe_radius = 100
 
         self.enemies_killed = 0
+
+        self.wave_message_font = pygame.font.SysFont("dejavusansmono", 70, bold=True)
+        self.display_message = ""  # O texto a ser exibido
+        self.message_end_time = 0
 
         groups = {'all': self.all_sprites, 'arrows': self.arrows}
         self.player = Player(position=(WIN_WIDTH / 2, 500), groups=groups)
@@ -57,6 +61,10 @@ class PlayScene:
         self.enemies_to_spawn_this_wave = 3 + self.wave_number
 
     def spawn_enemy(self):
+            enemy_types = ['normal', 'fast', 'tank']
+            enemy_weights = [0.60, 0.25, 0.15]
+
+            chosen_type = random.choices(enemy_types, weights=enemy_weights, k=1)[0]
 
             while True:
                 side = random.randint(0, 3)
@@ -80,6 +88,8 @@ class PlayScene:
 
             new_enemy = Enemy(position=pos,
                               player=self.player,
+                              enemies_group=self.enemies,  # Passa o grupo de inimigos
+                              enemy_type=chosen_type,
                               strength_multiplier=self.enemy_strength_multiplier)
 
             self.all_sprites.add(new_enemy)
@@ -101,6 +111,9 @@ class PlayScene:
         elif self.wave_in_progress and len(self.enemies) == 0:
             self.wave_in_progress = False
             self.next_wave_start_time = now + self.next_wave_delay
+            self.display_message = f"HORDE {self.wave_number} COMPLETED!"
+            # Define que a mensagem deve sumir em 3 segundos (3000 ms)
+            self.message_end_time = now + 3000
             print("Horda derrotada! Próxima horda em 5 segundos...")
 
         self.all_sprites.update()
@@ -138,17 +151,41 @@ class PlayScene:
         hits = pygame.sprite.groupcollide(self.arrows, self.enemies, True, False)
         for arrow, enemy_list in hits.items():
             for enemy in enemy_list:
-                enemy.take_damage(arrow.damage)
-                if not enemy.alive():
+                # Captura o retorno: True se morreu, False se não.
+                was_killed = enemy.take_damage(arrow.damage)
+
+                # Se o inimigo foi morto NESTE golpe, dá o XP.
+                if was_killed:
                     self.player.xp += enemy.xp_drop
                     print(f"Inimigo derrotado! +{enemy.xp_drop} XP.")
+
+                    if self.player.xp >= self.player.xp_to_next_level:
+                        self.player.level_up()
+
                     self.enemies_killed += 1
 
         if not self.player.alive():
             return 'GAME_OVER'
 
+        # Dentro da classe PlayScene
+
     def draw(self, screen: Surface):
-        # Este método está correto.
-        screen.blit(self.background, self.background_rect)
-        self.all_sprites.draw(screen)
-        self.hud.draw(screen)
+            # Desenha o fundo e os sprites
+            screen.blit(self.background, self.background_rect)
+            self.all_sprites.draw(screen)
+
+            self.hud.draw(screen, self.wave_number)
+
+            # --- MUDANÇA AQUI: DESENHA A MENSAGEM SE ELA ESTIVER ATIVA ---
+            # Verifica se o tempo atual ainda é menor que o tempo de fim da mensagem
+            if pygame.time.get_ticks() < self.message_end_time:
+                # Renderiza o texto
+                text_surf = self.wave_message_font.render(self.display_message, True, COLOR_YELLOW)
+                # Posiciona o texto no centro da tela
+                text_rect = text_surf.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
+
+                # Desenha o texto na tela
+                screen.blit(text_surf, text_rect)
+
+            # Desenha o HUD por cima de tudo
+            self.hud.draw(screen, self.wave_number)
