@@ -1,6 +1,6 @@
 import pygame
 from pygame import Surface
-import random  # 1. Importe o módulo random no início do arquivo
+import random
 
 from code.Player import Player
 from code.Enemy import Enemy
@@ -11,8 +11,7 @@ from code.const import WIN_WIDTH, WIN_HEIGHT, COLOR_YELLOW
 class PlayScene:
     def __init__(self, window: Surface):
         self.window = window
-        self.background = pygame.transform.scale(pygame.image.load('./assets/fundofase.jpg').convert(),
-                                                 (WIN_WIDTH, WIN_HEIGHT))
+        self.background = pygame.transform.scale(pygame.image.load('./assets/fundofase.jpg').convert(),(WIN_WIDTH, WIN_HEIGHT))
         self.background_rect = self.background.get_rect(left=0, top=0)
         self.all_sprites = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
@@ -25,7 +24,7 @@ class PlayScene:
         self.enemies_killed = 0
 
         self.wave_message_font = pygame.font.SysFont("dejavusansmono", 70, bold=True)
-        self.display_message = ""  # O texto a ser exibido
+        self.display_message = ""
         self.message_end_time = 0
 
         groups = {'all': self.all_sprites, 'arrows': self.arrows}
@@ -69,13 +68,13 @@ class PlayScene:
             while True:
                 side = random.randint(0, 3)
 
-                if side == 0:  # Cima
+                if side == 0:
                     pos = (random.randint(0, 900), -50)
-                elif side == 1:  # Direita
+                elif side == 1:
                     pos = (800 + 50, random.randint(0, 500))
-                elif side == 2:  # Baixo
+                elif side == 2:
                     pos = (random.randint(0, 950), 450 + 50)
-                else:  # Esquerda
+                else:
                     pos = (-50, random.randint(0, 400))
 
                 spawn_pos_vec = pygame.math.Vector2(pos)
@@ -88,7 +87,7 @@ class PlayScene:
 
             new_enemy = Enemy(position=pos,
                               player=self.player,
-                              enemies_group=self.enemies,  # Passa o grupo de inimigos
+                              enemies_group=self.enemies,
                               enemy_type=chosen_type,
                               strength_multiplier=self.enemy_strength_multiplier)
 
@@ -112,7 +111,6 @@ class PlayScene:
             self.wave_in_progress = False
             self.next_wave_start_time = now + self.next_wave_delay
             self.display_message = f"HORDE {self.wave_number} COMPLETED!"
-            # Define que a mensagem deve sumir em 3 segundos (3000 ms)
             self.message_end_time = now + 3000
             print("Horda derrotada! Próxima horda em 5 segundos...")
 
@@ -123,38 +121,28 @@ class PlayScene:
             for j in range(i + 1, len(enemies_list)):
                 enemy2 = enemies_list[j]
 
-                # Calcula a distância entre os dois inimigos
                 distance_vec = enemy1.position - enemy2.position
                 distance = distance_vec.length()
 
-                # Se a distância for menor que a soma dos raios, eles estão colidindo
                 total_radius = enemy1.radius + enemy2.radius
                 if distance < total_radius:
-                    # Calcula o quanto eles estão sobrepostos
                     overlap = total_radius - distance
 
-                    # Calcula a direção para empurrá-los (normaliza o vetor de distância)
-                    # Adiciona um pequeno valor se o vetor for nulo para evitar divisão por zero
                     if distance_vec.length() == 0:
                         distance_vec = pygame.math.Vector2(1, 0)
 
                     push_vec = distance_vec.normalize()
 
-                    # Move cada inimigo para fora na direção oposta, pela metade da sobreposição
                     enemy1.position += push_vec * (overlap / 2)
                     enemy2.position -= push_vec * (overlap / 2)
 
-                    # Atualiza os retângulos após a correção da posição
                     enemy1.rect.center = enemy1.position
                     enemy2.rect.center = enemy2.position
 
         hits = pygame.sprite.groupcollide(self.arrows, self.enemies, True, False)
         for arrow, enemy_list in hits.items():
             for enemy in enemy_list:
-                # Captura o retorno: True se morreu, False se não.
                 was_killed = enemy.take_damage(arrow.damage)
-
-                # Se o inimigo foi morto NESTE golpe, dá o XP.
                 if was_killed:
                     self.player.xp += enemy.xp_drop
                     print(f"Inimigo derrotado! +{enemy.xp_drop} XP.")
@@ -167,25 +155,14 @@ class PlayScene:
         if not self.player.alive():
             return 'GAME_OVER'
 
-        # Dentro da classe PlayScene
-
     def draw(self, screen: Surface):
-            # Desenha o fundo e os sprites
             screen.blit(self.background, self.background_rect)
             self.all_sprites.draw(screen)
 
             self.hud.draw(screen, self.wave_number)
-
-            # --- MUDANÇA AQUI: DESENHA A MENSAGEM SE ELA ESTIVER ATIVA ---
-            # Verifica se o tempo atual ainda é menor que o tempo de fim da mensagem
             if pygame.time.get_ticks() < self.message_end_time:
-                # Renderiza o texto
                 text_surf = self.wave_message_font.render(self.display_message, True, COLOR_YELLOW)
-                # Posiciona o texto no centro da tela
                 text_rect = text_surf.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
-
-                # Desenha o texto na tela
                 screen.blit(text_surf, text_rect)
 
-            # Desenha o HUD por cima de tudo
             self.hud.draw(screen, self.wave_number)

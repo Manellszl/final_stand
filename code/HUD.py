@@ -5,45 +5,40 @@ from code.const import COLOR_WHITE, COLOR_YELLOW, WIN_WIDTH
 
 class HUD:
     def __init__(self, player):
-        # Armazena uma referência ao jogador para acessar seus atributos
         self.player = player
 
-        # Carrega a fonte que será usada
         self.font = pygame.font.SysFont("dejavusansmono", 24, bold=True)
 
         # Configurações da barra de vida
         self.health_bar_pos = (20, 20)
         self.bar_width = 200
         self.bar_height = 20
-        self.health_bar_color = (255, 0, 0)  # Vermelho
+        self.health_bar_color = (255, 0, 0)
 
         # Configurações da barra de XP
         self.xp_bar_pos = (20, 50)
-        self.xp_bar_color = (0, 0, 255)  # Azul
+        self.xp_bar_color = (0, 0, 255)
 
-        # Dentro da classe HUD
 
     def draw(self, screen: Surface, current_wave: int):
-            """Desenha todos os elementos do HUD na tela, sem duplicação."""
 
             # --- 1. Barra de Vida ---
             health_ratio = 1.0
-            if self.player.max_health > 0:  # Evita divisão por zero se a vida máxima for 0
+            if self.player.max_health > 0:
                 health_ratio = self.player.health / self.player.max_health
 
             pygame.draw.rect(screen, (100, 100, 100), (*self.health_bar_pos, self.bar_width, self.bar_height))
             pygame.draw.rect(screen, self.health_bar_color,
                              (*self.health_bar_pos, self.bar_width * health_ratio, self.bar_height))
             pygame.draw.rect(screen, COLOR_WHITE, (*self.health_bar_pos, self.bar_width, self.bar_height), 2)
-            # Texto da vida sobre a barra
             health_text_surf = self.font.render(f"{self.player.health}/{self.player.max_health}", True, COLOR_WHITE)
             health_text_rect = health_text_surf.get_rect(
                 center=(self.health_bar_pos[0] + self.bar_width / 2, self.health_bar_pos[1] + self.bar_height / 2))
             screen.blit(health_text_surf, health_text_rect)
 
-            # --- 2. Barra de XP (Agora fora do 'if') ---
+            # --- 2. Barra de XP ---
             xp_ratio = 1.0
-            if self.player.xp_to_next_level > 0:  # Evita divisão por zero
+            if self.player.xp_to_next_level > 0:
                 xp_ratio = self.player.xp / self.player.xp_to_next_level
 
             pygame.draw.rect(screen, (100, 100, 100), (*self.xp_bar_pos, self.bar_width, self.bar_height))
@@ -65,7 +60,7 @@ class HUD:
             # --- 5. Textos de Upgrade (Apenas se tiver pontos) ---
             if self.player.upgrade_points > 0:
                 points_text = f"Upgrade Points: {self.player.upgrade_points}"
-                points_surf = self.font.render(points_text, True, (0, 255, 0))  # Verde
+                points_surf = self.font.render(points_text, True, (0, 255, 0))
                 points_rect = points_surf.get_rect(left=level_rect.right + 20, centery=level_rect.centery)
                 screen.blit(points_surf, points_rect)
 

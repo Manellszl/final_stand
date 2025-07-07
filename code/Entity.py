@@ -20,5 +20,4 @@ class Entity(pygame.sprite.Sprite, ABC):
 
     @abstractmethod
     def update(self):
-        # O método update é chamado automaticamente pelo grupo de sprites
         pass

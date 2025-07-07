@@ -12,7 +12,13 @@ class Game:
         self.window = pygame.display.set_mode(size=(WIN_WIDTH, WIN_HEIGHT))
         self.is_running = True
 
-        # Armazena as instâncias das cenas
+        self.music_tracks = {
+            'MENU': './assets/music/Menu.mp3',
+            'PLAYING': './assets/music/gameplaymusic.mp3',
+            'GAME_OVER': './assets/music/gameover.mp3'
+        }
+        self.current_playing_music = None
+
         self.scenes = {
             'MENU': Menu(self.window),
             'PLAYING': PlayScene(self.window),
@@ -20,6 +26,8 @@ class Game:
             'SCORE': ScoreScene(self.window)
         }
         self.active_scene_name = 'MENU'
+
+        self.play_music_for_scene(self.active_scene_name)
 
     def run(self):
         clock = pygame.time.Clock()
@@ -31,31 +39,28 @@ class Game:
             command_from_events = active_scene.handle_events(events)
             command_from_update = active_scene.update()
 
-            # Processa o comando de qualquer uma das fontes
             command = command_from_events or command_from_update
 
             if command == 'QUIT':
                 self.is_running = False
             elif command == 'GAME_OVER':
-                # Pega as estatísticas da PlayScene antes de mudar
                 stats = {
                     "level": active_scene.player.level,
                     "waves": active_scene.wave_number,
                     "kills": active_scene.enemies_killed
                 }
-                # Passa as estatísticas para a cena de Game Over
                 self.scenes['GAME_OVER'].set_stats(**stats)
                 self.active_scene_name = 'GAME_OVER'
-            elif command is not None:  # Se for 'MENU' ou 'PLAYING'
-                # IMPORTANTE: Se o comando for para jogar, reseta a PlayScene
+                self.play_music_for_scene('GAME_OVER')
+            elif command is not None:
                 if command == 'PLAYING':
                     self.scenes['PLAYING'] = PlayScene(self.window)
 
-                # Reseta a cena do menu também, se estiver vindo do Game Over
                 if self.active_scene_name == 'GAME_OVER' and command == 'MENU':
                     self.scenes['MENU'] = Menu(self.window)
 
                 self.active_scene_name = command
+                self.play_music_for_scene(self.active_scene_name)
 
             active_scene.draw(self.window)
             pygame.display.flip()
@@ -63,3 +68,12 @@ class Game:
 
         pygame.quit()
         quit()
+
+    def play_music_for_scene(self, scene_name: str):
+        track_path = self.music_tracks.get(scene_name)
+
+        if track_path and track_path != self.current_playing_music:
+            pygame.mixer_music.fadeout(500)
+            pygame.mixer.music.load(track_path)
+            pygame.mixer.music.play(-1, fade_ms=500)
+            self.current_playing_music = track_path

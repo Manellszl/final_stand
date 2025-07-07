@@ -12,16 +12,14 @@ class GameOverScene:
         self.font_small = pygame.font.SysFont("dejavusansmono", 30, bold=True)
         self.menu_option = 0
 
-        # Atributos para as estatísticas, que serão definidos depois
         self.final_level = 0
         self.waves_survived = 0
         self.enemies_killed = 0
         self.menu_options_list = ['RETRY', 'MENU']
 
     def set_stats(self, level: int, waves: int, kills: int):
-        """Recebe as estatísticas finais da PlayScene."""
         self.final_level = level
-        self.waves_survived = waves - 1  # Mostra a última wave completada
+        self.waves_survived = waves - 1
         self.enemies_killed = kills
 
         current_run_score = {
@@ -29,7 +27,6 @@ class GameOverScene:
             "waves": self.waves_survived,
             "kills": self.enemies_killed
         }
-        # Adiciona e salva a pontuação assim que a tela de Game Over é criada
         sm.add_score(current_run_score)
         print("Pontuação salva!")
 
@@ -43,17 +40,14 @@ class GameOverScene:
                 elif event.key == pygame.K_UP:
                     self.menu_option = (self.menu_option - 1) % len(self.menu_options_list)
                 elif event.key == pygame.K_RETURN:
-                    if self.menu_option == 0:  # RETRY
-                        return 'PLAYING'  # Retorna comando para jogar de novo
-                    elif self.menu_option == 1:  # MENU
+                    if self.menu_option == 0:
+                        return 'PLAYING'
+                    elif self.menu_option == 1:
                         return 'MENU'
         return None
 
-    def update(self):
-        pass  # Nada para atualizar
-
     def draw(self, screen: Surface):
-        screen.fill((10, 10, 30))  # Fundo escuro
+        screen.fill((10, 10, 30))
 
         # Desenha "GAME OVER"
         game_over_surf = self.font_large.render("GAME OVER", True, COLOR_RED)

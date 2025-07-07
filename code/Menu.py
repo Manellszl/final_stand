@@ -5,8 +5,6 @@ from pygame.font import Font
 
 from code.const import WIN_HEIGHT, WIN_WIDTH, COLOR_YELLOW, MENU_OPTION, COLOR_WHITE, COLOR_RED, COLOR_DARK_YELLOW
 
-
-# A função carregar_gif_para_frames continua igual...
 def carregar_gif_para_frames(caminho_gif):
     frames = []
     with Image.open(caminho_gif) as gif:
@@ -34,16 +32,13 @@ class Menu:
         self.frames = carregar_gif_para_frames(
             './assets/menu.gif')
         self.rect = self.frames[0].get_rect(left=0, top=0)
-        self.menu_option = 0  # A única variável para controlar a opção selecionada
+        self.menu_option = 0
         self.frame_index = 0
         self.animation_speed = 250
         self.last_update = pygame.time.get_ticks()
 
-        pygame.mixer_music.load('./assets/Menu.mp3')
-        pygame.mixer_music.play(-1)
-
     def handle_events(self, events):
-        """Processa os eventos e retorna um 'comando' se necessário."""
+        mouse_pos = pygame.mouse.get_pos()
         for event in events:
             if event.type == pygame.QUIT:
                 return 'QUIT'
@@ -63,14 +58,12 @@ class Menu:
         return None
 
     def update(self):
-        """Atualiza a animação do background."""
         now = pygame.time.get_ticks()
         if now - self.last_update > self.animation_speed:
             self.last_update = now
             self.frame_index = (self.frame_index + 1) % len(self.frames)
 
     def draw(self, screen: Surface):
-        """Desenha a cena do menu em um quadro."""
         screen.blit(self.frames[self.frame_index], self.rect)
         self.menu_text(self.title_font, 'FINAL', COLOR_DARK_YELLOW, (WIN_WIDTH / 2, 70))
         self.menu_text(self.title_font, 'STAND', COLOR_DARK_YELLOW, (WIN_WIDTH / 2, 170))
