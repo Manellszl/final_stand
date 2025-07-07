@@ -46,6 +46,9 @@ class GameOverScene:
                         return 'MENU'
         return None
 
+    def update(self):
+        pass
+
     def draw(self, screen: Surface):
         screen.fill((10, 10, 30))
 
